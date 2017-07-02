@@ -1,106 +1,110 @@
-import { Component } from '@angular/core';
+import { Component} from '@angular/core';
+import { IonicPage, NavController } from 'ionic-angular';
 
-import { NavController, Platform } from 'ionic-angular';
-
+import { Geolocation } from '@ionic-native/geolocation';
 import {
-    Geolocation,
-    GoogleMap,
-    Geocoder,
-    GeocoderRequest,
-    GeocoderResult,
-    GoogleMapsEvent,
-    GoogleMapsLatLng,
-    GoogleMapsMarker,
-    GoogleMapsMarkerOptions,
-    Toast
-} from 'ionic-native';
+  GoogleMaps,
+  GoogleMap,
+  GoogleMapsEvent,
+  LatLng,
+  CameraPosition,
+  MarkerOptions,
+  Geocoder, 
+  GeocoderRequest, 
+  GeocoderResult,
+} from '@ionic-native/google-maps';
+import { Toast } from '@ionic-native/toast';
 
+@IonicPage()
 @Component({
-    selector: 'page-home',
-    templateUrl: 'home.html'
+  selector: 'page-home',
+  templateUrl: 'home.html'
 })
 export class HomePage {
 
-    map: GoogleMap;
-    latLng: any;
-    constructor(public navCtrl: NavController, private platform: Platform) {
-        platform.ready().then(() => {
-            this.getCurrentPosition();
-        });
-    }
+  map: GoogleMap;
+  myPosition: any = {};
+ 
+  constructor(
+    private navCtrl: NavController,
+    private geolocation: Geolocation,
+    private googleMaps: GoogleMaps,
+    private geocoder: Geocoder,
+    private toast: Toast
+  ) {}
 
-    getCurrentPosition() {
-        Geolocation.getCurrentPosition()
-            .then(position => {
+  ionViewDidLoad(){
+    this.getCurrentPosition();
+  }
 
-                let lat = position.coords.latitude;
-                let lng = position.coords.longitude;
+  getCurrentPosition(){
+    this.geolocation.getCurrentPosition()
+    .then(position => {
+      this.myPosition = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude
+      }
+      this.loadMap();
+    })
+    .catch(error=>{
+      this.toast.show("No se ha podido obtener su ubicación", '5000', 'center')
+      .subscribe(toast => console.log(toast) );
+    })
+  }
 
-                this.latLng = new GoogleMapsLatLng(lat, lng)
+  loadMap(){
+    // create a new map by passing HTMLElement
+    let element: HTMLElement = document.getElementById('map');
 
-                this.loadMap();
-            });
-    }
+    this.map = this.googleMaps.create(element);
 
-    loadMap() {
-        this.map = new GoogleMap('map', {
-            'backgroundColor': 'white',
-            'controls': {
-                'compass': true,
-                'myLocationButton': true,
-                'indoorPicker': true,
-                'zoom': true,
-            },
-            'gestures': {
-                'scroll': true,
-                'tilt': true,
-                'rotate': true,
-                'zoom': true
-            },
-            'camera': {
-                'latLng': this.latLng,
-                'tilt': 30,
-                'zoom': 15,
-                'bearing': 50
-            }
-        });
+    // create CameraPosition
+    let position: CameraPosition = {
+      target: new LatLng(this.myPosition.latitude, this.myPosition.longitude),
+      zoom: 12,
+      tilt: 30
+    };
 
-        this.map.on(GoogleMapsEvent.MAP_READY).subscribe(() => {
-            console.log('Map is ready!');
-            this.setMarker();
-        });
-    }
+    this.map.one(GoogleMapsEvent.MAP_READY).then(()=>{
+      console.log('Map is ready!');
 
-    setMarker() {
-        if (this.latLng) {
-            let customMarker = "www/assets/custom-marker.png";
-            let markerOptions: GoogleMapsMarkerOptions = {
-                position: this.latLng,
-                title: 'Mi posición',
-                icon: customMarker
-            };
-            let request: GeocoderRequest = {
-                position: this.latLng
-            };
-            this.map.addMarker(markerOptions)
-                .then((marker: GoogleMapsMarker) => {
-                    Geocoder.geocode(request)
-                        .then((results: GeocoderResult) => {
-                            var address = [
-                                (results[0].thoroughfare || "") + " " + (results[0].subThoroughfare || ""),
-                                results[0].locality].join(", ");
-                            console.log("data_: ", address);
-                            marker.setTitle(address);
-                            marker.showInfoWindow();
-                        });
-                });
-        } else {
-            Toast.show("No se ha podido obtener su ubicación", '5000', 'bottom').subscribe(
-                toast => {
-                    console.log(toast);
-                }
-            );
-        }
-    }
+      // move the map's camera to position
+      this.map.moveCamera(position);
 
+      let markerOptions: MarkerOptions = {
+        position: this.myPosition,
+        title: "Hello"
+      };
+
+      this.addMarker(markerOptions);
+    });
+  }
+
+  addMarker(options){
+    let markerOptions: MarkerOptions = {
+      position: new LatLng(options.position.latitude, options.position.longitude),
+      title: options.title,
+      icon: options.icon
+    };
+    this.map.addMarker(markerOptions)
+    .then(marker =>{
+      this.doGeocode(marker);
+    })
+  }
+
+  doGeocode(marker){
+    let request: GeocoderRequest = {
+      position: new LatLng(this.myPosition.latitude, this.myPosition.longitude),
+    };
+    this.geocoder.geocode(request)
+    .then((results: GeocoderResult) => {
+      let address = [
+        (results[0].thoroughfare || "") + " " + (results[0].subThoroughfare || ""),
+        results[0].locality
+      ].join(", ");
+      console.log("data_: ", address);
+      marker.setTitle(address);
+      marker.showInfoWindow();
+    });
+  }
 }
