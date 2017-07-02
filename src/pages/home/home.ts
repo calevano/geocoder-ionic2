@@ -1,5 +1,5 @@
 import { Component} from '@angular/core';
-import { IonicPage, NavController } from 'ionic-angular';
+import { IonicPage } from 'ionic-angular';
 
 import { Geolocation } from '@ionic-native/geolocation';
 import {
@@ -26,7 +26,6 @@ export class HomePage {
   myPosition: any = {};
  
   constructor(
-    private navCtrl: NavController,
     private geolocation: Geolocation,
     private googleMaps: GoogleMaps,
     private geocoder: Geocoder,
@@ -47,8 +46,9 @@ export class HomePage {
       this.loadMap();
     })
     .catch(error=>{
-      this.toast.show("No se ha podido obtener su ubicación", '5000', 'center')
-      .subscribe(toast => console.log(toast) );
+      console.log(error);
+      // this.toast.show("No se ha podido obtener su ubicación", '5000', 'center')
+      // .subscribe(toast => console.log(toast) );
     })
   }
 
